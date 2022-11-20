@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}
+  Prediction app - Prediction
+{% endblock %}
+{% block content %}
+<div class="login">
+  <!-- <a href="/logout" role="button" class="btn btn-primary btn-block btn-large">Se déconnecter</a> -->
+  <h2>Prediction</h2>
+    <p>Enseigner total_day_charge, number_customer_service_calls et total_eve_charge :</p>
+      <!-- Inputs for our ML model -->
+      <form action="{{ url_for('predict')}}" method="post">
+        <!-- <label for="total_day_charge">total_day_charge</label> -->
+        total_day_charge : <input type="text" name="total_day_charge" placeholder="total_day_charge" required="required" />  <br>
+        number_customer_service_calls : <input type="text" name="number_customer_service_calls" placeholder="number_customer_service_calls" required="required"/>  <br>
+        total_eve_charge : <input type="text" name="total_eve_charge" placeholder="total_eve_charge" required="required"/>  <br>
+
+        <button type="submit" class="btn btn-primary btn-block btn-large">Prédire</button>
+      </form>
+      
+      
+      <p>{{ prediction_text }}</p>
+    <br>
+    <br>
+
+</div>
+{% endblock %}
