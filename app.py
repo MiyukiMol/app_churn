@@ -2,16 +2,23 @@ from flask import Flask, request, render_template, redirect
 import pickle
 
 from flask_mysqldb import MySQL
-import mysql.connector # pip install mysql-connector-python
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.types import Float,Integer,String,DateTime
+#from flask_migrate import Migrate
 #from flask_login import UserMixin, LoginManager, login_user,logout_user, login_required, current_user
+
+#from flask_wtf import FlaskForm
+#from wtforms import StringField, IntegerField, FloatField, SubmitField
+#from wtforms.validators import DataRequired
 
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
+import numpy as np
+
 from datetime import datetime
-#import pytz
+import pytz
 
 #import flask_monitoringdashboard as dashboard
 
@@ -20,66 +27,115 @@ from datetime import datetime
 app = Flask(__name__)
 
 
+
+
 #-----------------------------------------Connection Database-----------------------------------------
-def get_user_by_username(username):
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user=username,
-        passwd="root",
-        database="movie_5"
-        )
-    mycursor = mydb.cursor()
-    #mycursor.execute("SELECT * FROM actor")
-    return mydb, mycursor
+# MySQL DB
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://username:password@localhost/db_name'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost/predicts'
+                                        
+# initialize the database
+db = SQLAlchemy(app)
+#migrate = Migrate(app, db)
 
-mydb, mycursor = get_user_by_username("root")
-
-#for x in mycursor:
-#    print(x)
-
-try:
-    mydb, mycursor = get_user_by_username("root") 
-    #mydb = mysql.connector.connect(
-                                        #host = "localhost",
-                                        #user="root",
-                                        #passwd="root",
-                                        #database = "movie_5",
-                                        #auth_plugin='mysql_native_password',
-                                        #)
-except:
-    print ("I am unable to connect to the database")
-
+# create BD predict
+class Predict(db.Model):
+    id = db.Column(db.Integer, primary_key=True,autoincrement=True)
+    total_day_charge = db.Column(db.Float, nullable=False)
+    number_customer_service_calls = db.Column(db.Integer, nullable=False)
+    total_eve_charge = db.Column(db.Float, nullable=False)
+    states = db.Column(db.String(2), nullable=False)
+    #user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    output = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
 
 #-----------------------------------------upload prediction model-----------------------------------------
 # upload prediction model
-model = pickle.load(open('model.pkl', 'rb'))
+model = pickle.load(open('model_states.pkl', 'rb'))
 
 @app.route("/")
 def home():
-    return render_template('index.html')
+    return render_template('home.html')
 
 
 # upload prediction model
 @app.route('/predict',methods=['GET','POST'])
 def predict():
+    states = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
+        'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME',
+        'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM',
+        'NV', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX',
+        'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
+    #predict_array = np.zeros(69)
+    predict_array = np.zeros(54)
+    idx = 0
+
+
     if request.method == 'GET':
-        return render_template('index.html')
+        return render_template('index.html',states=states)
     else:
         total_day_charge = float(request.form["total_day_charge"])
         number_customer_service_calls = int(request.form["number_customer_service_calls"])
         total_eve_charge = float(request.form["total_eve_charge"])
 
-        prediction = model.predict([[total_day_charge, number_customer_service_calls,total_eve_charge]])  
+        state = request.form["states"]
+        predict_array[0] = total_day_charge
+        predict_array[1] = number_customer_service_calls
+        predict_array[2] = total_eve_charge
+
+        for index, item in enumerate(states):
+            if item == state:
+                idx = index
+        idx = idx + 3
+        predict_array[idx] = 1
+
+        #prediction = model.predict([[total_day_charge, number_customer_service_calls,total_eve_charge]])  
+        prediction = model.predict([predict_array])  
         output = round(prediction[0], 2) 
 
+        # assigner les données remplit dans le form à la BD
+        predict = Predict(total_day_charge=total_day_charge,
+                    number_customer_service_calls=number_customer_service_calls,
+                    total_eve_charge=total_eve_charge,
+                    states=state,
+                    output=int.from_bytes(output, "little"),
+                    #user_id = current_user.id # current_user function
+                    )
+        
+        # add les données dans la BD
+        db.session.add(predict)
+        db.session.commit()
+
         if output == 0:
-            return render_template('index.html', prediction_text=f'Un total day charge avec {total_day_charge} , number_customer_service_calls {number_customer_service_calls} et total_eve_charge {total_eve_charge} : "no risk of churn"')
+            return render_template('index.html', states=states, prediction_text=f'Un total day charge avec {total_day_charge} , number_customer_service_calls {number_customer_service_calls} , total_eve_charge {total_eve_charge} et state {state} : "no risk of churn"')
         else :
-            return render_template('index.html', prediction_text=f'Un total day charge avec {total_day_charge} , number_customer_service_calls {number_customer_service_calls} et total_eve_charge {total_eve_charge} : "risk of churn"')
+            return render_template('index.html', states=states, prediction_text=f'Un total day charge avec {total_day_charge} , number_customer_service_calls {number_customer_service_calls} , total_eve_charge {total_eve_charge} et state {state} : "risk of churn"')
+
+@app.route('/resultat', methods=['GET','POST'])
+#@login_required 
+def resultat():
+    if request.method == 'GET':
+        # get all data with list format
+        predicts = Predict.query.all() # take all the data
+        #predicts = Predict.query.filter_by(id=current_user.id).all() # filtre only current user data
+    return render_template('resultats.html', predicts=predicts)
 
 
+# delete a resultat
+@app.route('/<int:id>/delete', methods=['GET'])
+#@login_required 
+def delete(id):
+    predict_delete = Predict.query.get_or_404(id)
 
+    try:
+        db.session.delete(predict_delete)
+        db.session.commit()
+        #flash("Résultat deleted successfully")
+        return redirect('/resultat')
+    except:
+        #flash("There was a problem deleting resultat, please try it later.")
+        return redirect('/resultat')
 
 # Create Custom Error Pages
 
@@ -101,5 +157,5 @@ if __name__ == "__main__":
 # https://www.youtube.com/watch?v=2LqrfEzuIMk
 
 
-# desactivate under churn-app/venv
+# deactivate under churn-app/venv
 # actiavet under churn-app/venv/Scripts

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}
+  Prediction app - Résultats
+{% endblock %}
+{% block content %}
+<h1>Résultats</h1>
+
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">ID</th>
+        <th scope="col">total_day_charge</th>
+        <th scope="col">number_customer_service_calls</th>
+        <th scope="col">total_eve_charge</th>
+        <th scope="col">states</th>
+        <th scope="col">Prédiction</th>
+        <th scope="col">Date de prédiction</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for predict in predicts %}
+      <tr>
+        <th scope="row">{{ predict.id }}</th>
+        <td>{{ predict.total_day_charge }}</td>
+        <td>{{ predict.number_customer_service_calls }}</td>
+        <td>{{ predict.total_eve_charge }}</td>
+        <td>{{ predict.states }}</td>
+        <td>{{ predict.output }}</td>
+        <td>{{ predict.created_at }}</td>
+        <td><a href="/{{predict.id}}/delete" role="button" class="btn btn-danger btn-block btn-large">Supprimer</a></td>
+        <!-- <td><button type="submit" class="btn btn-primary btn-block btn-large">Prédire</button></td> -->
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}
