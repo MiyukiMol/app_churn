@@ -4,7 +4,7 @@ mydb = mysql.connector.connect(
                                 host = "localhost",
                                 user="root",
                                 passwd="root",
-                                #database = "predicts",
+                                database = "predicts",
                                 #auth_plugin='mysql_native_password',
                                 )
 
@@ -20,9 +20,19 @@ for db in mycursor:
 # テーブルの初期化
 #mycursor.execute("DROP TABLE IF EXISTS predict")
 
+#mycursor.execute("DELETE * FROM predict")
+
 # create table 
 # >>> from app import db
 # >>> db.create_all()
+
+# add data to a table User
+# >>> from app import db, User
+# >>> db.create_all()
+# >>> a = User('Marie')
+# >>> db.session.add(a)
+# >>> db.session.commit()
+# >>> exit()
 
 # テーブルの作成
 # mycursor.execute("""CREATE TABLE predict(
