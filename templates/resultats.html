@@ -15,6 +15,7 @@
         <th scope="col">states</th>
         <th scope="col">Prédiction</th>
         <th scope="col">Date de prédiction</th>
+        <th scope="col">Username </th>
         <th scope="col"></th>
       </tr>
     </thead>
@@ -28,6 +29,7 @@
         <td>{{ predict.states }}</td>
         <td>{{ predict.output }}</td>
         <td>{{ predict.created_at }}</td>
+        <td>{{ predict.user.username}}</td>
         <td><a href="/{{predict.id}}/delete" role="button" class="btn btn-danger btn-block btn-large">Supprimer</a></td>
         <!-- <td><button type="submit" class="btn btn-primary btn-block btn-large">Prédire</button></td> -->
       </tr>

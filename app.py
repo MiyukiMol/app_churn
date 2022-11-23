@@ -1,25 +1,19 @@
 from flask import Flask, request, render_template, redirect, flash
 import pickle
-
 from flask_mysqldb import MySQL
-
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.types import Float,Integer,String,DateTime
 #from flask_migrate import Migrate
-
-from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, FloatField, PasswordField, SubmitField, BooleanField, ValidationError
-from wtforms.validators import DataRequired, EqualTo, Length
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, LoginManager, login_user,logout_user, login_required, current_user
 
 import os
-
 import numpy as np
-
 from datetime import datetime
 import pytz
+
+from webforms import LoginForm, UserForm
 
 #import flask_monitoringdashboard as dashboard
 
@@ -87,11 +81,7 @@ def dashboard():
 
 
 
-# create Login Form
-class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[DataRequired()])
-    password = PasswordField('password', validators=[DataRequired()])
-    submit = SubmitField()
+
 
 # create BD predict
 class Predict(db.Model):
@@ -100,10 +90,11 @@ class Predict(db.Model):
     number_customer_service_calls = db.Column(db.Integer, nullable=False)
     total_eve_charge = db.Column(db.Float, nullable=False)
     states = db.Column(db.String(2), nullable=False)
-    #user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # foreign key to link Users (refer to primary key of the user)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     output = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
-
+    
 
 
 #----------------------------------------- User class -----------------------------------------
@@ -114,7 +105,8 @@ class Users(db.Model, UserMixin):
     name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     password_hash = db.Column(db.String(128), nullable=False)
-    #tests = db.relationship('Test', backref='user', lazy=True) # associer avec foreign key
+    # User can have Many prédictions
+    predict = db.relationship('Predict', backref='user', lazy=True) # associer avec foreign key
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(pytz.timezone('Europe/Paris')))
 
     @property
@@ -132,44 +124,47 @@ class Users(db.Model, UserMixin):
     def __repr__(self):
         return '<name %r>' % self.name
 
-# create a Form class
-class UserForm(FlaskForm):
-    name = StringField("Nom", validators=[DataRequired()])
-    username = StringField("username", validators=[DataRequired()])
-    email = StringField("Email", validators=[DataRequired()])
-    password_hash = PasswordField('password', validators=[DataRequired(), EqualTo('password_hash2', message='Passwords must match')])
-    password_hash2 = PasswordField('confirm password', validators=[DataRequired()])
-    submit = SubmitField("S'inscrire")
+
 
 
 @app.route('/user/add',methods=['GET', 'POST'])
 def add_user():
     name = None
+    username = None
     form = UserForm()
     if form.validate_on_submit():
         user = Users.query.filter_by(email=form.email.data).first()
-        if user is None:
-            # hash the password
-            hashed_pw = generate_password_hash(form.password_hash.data, "sha256")
-            user = Users(username=form.username.data, name=form.name.data, email=form.email.data, password_hash=hashed_pw)
-            db.session.add(user)
-            db.session.commit()
-        name = form.name.data
-        form.name.data = ''
-        form.username.data = ''
-        form.email.data = ''
-        form.password_hash.data = ''
-        #flash("User added successfully")
+        user1 = Users.query.filter_by(username=form.username.data).first()
+        if user1 is None:
+            if user is None:
+                # hash the password
+                hashed_pw = generate_password_hash(form.password_hash.data, "sha256")
+                user = Users(username=form.username.data, name=form.name.data, email=form.email.data, password_hash=hashed_pw)
+                db.session.add(user)
+                db.session.commit()
+            
+                name = form.name.data
+                form.name.data = ''
+                form.username.data = ''
+                form.email.data = ''
+                form.password_hash.data = ''
+                flash("User added successfully")
+            else:
+                flash("Email has exist. Please try with another email")
+        else:
+            flash("Username exist. Please try another username")
     our_users = Users.query.order_by(Users.created_at)
-    print(our_users)
+  
     return render_template('add_user.html',
             form=form,
             name=name,
+            username=username,
             our_users=our_users
             )
 
 # update database record
 @app.route("/update/<int:id>",methods=['GET', 'POST'])
+@login_required
 def update(id):
     form = UserForm()
     name_to_update = Users.query.get_or_404(id)
@@ -178,12 +173,12 @@ def update(id):
         name_to_update.email = request.form['email']
         try:
             db.session.commit()
-            #flash("User Updated Successfully!")
+            flash("User Updated Successfully!")
             return render_template("update.html",
             form=form,
             name_to_update = name_to_update)
         except:
-            #flash("Error...Please try again later.")
+            flash("Error...Please try again later.")
             return render_template("update.html",
             form=form,
             name_to_update = name_to_update)
@@ -203,7 +198,7 @@ def delete_user(id):
     try:
         db.session.delete(user_to_delete)
         db.session.commit()
-        #flash("User deleted Successfully!")
+        flash("User deleted Successfully!")
         our_users = Users.query.order_by(Users.created_at)
         return render_template("add_user.html",
             form=form,
@@ -211,7 +206,7 @@ def delete_user(id):
             our_users= our_users)
 
     except:
-        #flash("Error...Please try again later.")
+        flash("Error...Please try again later.")
         return render_template("add_user.html",
             form=form,
             name = name,
@@ -247,6 +242,7 @@ def predict():
     if request.method == 'GET':
         return render_template('index.html',states=states)
     else:
+
         total_day_charge = float(request.form["total_day_charge"])
         number_customer_service_calls = int(request.form["number_customer_service_calls"])
         total_eve_charge = float(request.form["total_eve_charge"])
@@ -272,7 +268,7 @@ def predict():
                     total_eve_charge=total_eve_charge,
                     states=state,
                     output=int.from_bytes(output, "little"),
-                    #user_id = current_user.id # current_user function
+                    user_id = current_user.id # current_user function
                     )
         
         # add les données dans la BD
@@ -289,9 +285,11 @@ def predict():
 def resultat():
     if request.method == 'GET':
         # get all data with list format
-        predicts = Predict.query.all() # take all the data
-        #predicts = Predict.query.filter_by(id=current_user.id).all() # filtre only current user data
+        #predicts = Predict.query.all() # take all the data
+        predicts = Predict.query.filter_by(user_id = current_user.id).all() # filtre only current user data
+        print("test",predicts)
     return render_template('resultats.html', predicts=predicts)
+
 
 
 # delete a resultat

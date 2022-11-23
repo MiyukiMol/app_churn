@@ -1,8 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% if name %}
-    <!-- <h1>Bonjour {{ name }}</h1> -->
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+{% endfor %}
+
+<!-- {% if name %}
+
     <h1>Update user</h1>
     <br><br><br>
     <table class="table table-hover table-bordered table-striped">
@@ -19,9 +28,14 @@
         
     </table>
     <br>
-{% else %}
+{% else %} -->
+
+{% if id == current_user.id %}
     <h1>Update user</h1>
-    <br>
+    <br><br>
+    <!-- ID to update: {{ id }} <br>
+    current ID: {{ current_user.id }} -->
+    <br><br>
     <div class="shadow p-3 mb-5 bg-body rounded">
         <form action="/update/{{ name_to_update.id }}" method="POST">
             {{ form.hidden_tag() }}
@@ -29,6 +43,11 @@
             {{ form.name.label(class="form-label") }}
 
             {{ form.name(class="form-control", value=name_to_update.name) }}
+            <br>
+
+            {{ form.username.label(class="form-label") }}
+
+            {{ form.username(class="form-control", value=name_to_update.username) }}
             <br>
 
             {{ form.email.label(class="form-label") }}
@@ -45,10 +64,22 @@
 
 <br><br><br>
 
+{% else %}
 
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        You can't edit this user
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
 
+  <h3>access denied</h3>
 
 {% endif %}
+
+
+
+<!-- {% endif %} -->
 
 
 
