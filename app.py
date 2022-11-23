@@ -15,12 +15,21 @@ import pytz
 
 from webforms import LoginForm, UserForm
 
-#import flask_monitoringdashboard as dashboard
-
+import flask_monitoringdashboard as dashboard
+# from flask_admin import Admin
+# from flask_admin.contrib.sqla import ModelView
 
 
 app = Flask(__name__)
 
+app.logger.debug('debug')
+app.logger.info('info')
+app.logger.warning('message')
+app.logger.error('error')
+app.logger.critical('critical')
+
+# flask monitoring dashboard
+dashboard.bind(app)
 
 
 
@@ -73,11 +82,11 @@ def logout():
     flash("You have been logged out.")
     return redirect('/login')
 
-# create dashboard page
-@app.route('/dashboard', methods=['GET','POST'])
+# create user dashboard page
+@app.route('/user_dashboard', methods=['GET','POST'])
 @login_required
-def dashboard():
-    return render_template('dashboard.html')
+def user_dashboard():
+    return render_template('user_dashboard.html')
 
 
 
@@ -126,7 +135,11 @@ class Users(db.Model, UserMixin):
 
 
 
+#----------------------------------------- Role class -----------------------------------------
 
+
+
+# register
 @app.route('/user/add',methods=['GET', 'POST'])
 def add_user():
     name = None
@@ -155,7 +168,7 @@ def add_user():
             flash("Username exist. Please try another username")
     our_users = Users.query.order_by(Users.created_at)
   
-    return render_template('add_user.html',
+    return render_template('register.html',
             form=form,
             name=name,
             username=username,
@@ -281,7 +294,7 @@ def predict():
             return render_template('index.html', states=states, prediction_text=f'Un total day charge avec {total_day_charge} , number_customer_service_calls {number_customer_service_calls} , total_eve_charge {total_eve_charge} et state {state} : "risk of churn"')
 
 @app.route('/resultat', methods=['GET','POST'])
-#@login_required 
+@login_required 
 def resultat():
     if request.method == 'GET':
         # get all data with list format
@@ -323,6 +336,77 @@ def page_not_found(e):
 def page_not_found(e):
 	return render_template("500.html"), 500
 
+
+# flask admin
+# class MyModelView(ModelView):
+    # is_accessible True = admin is visible by a user
+#     def is_accessible(self):
+#         return current_user.is_authenticated
+
+
+# admin = Admin(app)
+
+# admin.add_view(MyModelView(Users, db.session))
+# admin.add_view(MyModelView(Predict, db.session))
+
+@app.route('/admins/user', methods=['GET','POST'])
+@login_required 
+def admin_user():
+    name = None
+    form = UserForm()
+    if request.method == 'GET':
+        #id = current_user.id
+        email = current_user.email
+        if email == 'admin@test.fr':
+            our_users = Users.query.order_by(Users.created_at)
+            return render_template('admin_user.html',
+                form=form,
+                name = name,
+                our_users= our_users)
+        else:
+            flash('You are not authorised to visit admin page')
+            return render_template('user_dashboard.html')
+
+
+@app.route('/admins/resultat', methods=['GET','POST'])
+@login_required 
+def admin_resultat():
+    #name = None
+    #form = UserForm()
+    if request.method == 'GET':
+        #id = current_user.id
+        email = current_user.email
+        predicts = Predict.query.all()
+        if email == 'admin@test.fr':
+            #our_users = Users.query.order_by(Users.created_at)
+            return render_template('resultats.html', predicts=predicts)
+        else:
+            flash('You are not authorised to visit admin page')
+            return render_template('user_dashboard.html')
+
+
+
+
+# from logging.handlers import SMTPHandler
+# from logging import FileHandler, WARNING, ERROR, CRITICAL, INFO, Formatter
+
+# file_handler = FileHandler('logs/errorlog.txt')
+# file_handler.setLevel(ERROR)
+
+# app.logger.addHandler(file_handler)
+
+# mail_handler = SMTPHandler(
+#     mailhost='127.0.0.1',
+#     fromaddr='server-error@test.com',
+#     toaddrs=['nantes211@gmail.com'],
+#     subject='Application Error'
+#  )
+# mail_handler.setLevel(ERROR)
+# mail_handler.setFormatter(Formatter(
+#     '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+#     ))
+
+# app.logger.addHandler(mail_handler)
 
 
 if __name__ == "__main__":

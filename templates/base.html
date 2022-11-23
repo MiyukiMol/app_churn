@@ -31,19 +31,31 @@
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('resultat')}}">Resultats</a>
               </li>
-              <li class="nav-item">
+              <!-- <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('add_user')}}">Users</a>
-              </li>
+              </li> -->
               
               
             </ul>
             {% if current_user.is_authenticated %}
             <ul class="navbar-nav ">
+              {% if current_user.email == 'admin@test.fr' %}
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Admin
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                  <a class="dropdown-item" href="{{ url_for('admin_user') }}">Utilisateurs</a>
+                  <a class="dropdown-item" href="{{ url_for('admin_resultat') }}">Résultats</a>
+                </div>
+              </li> 
+              {% endif %}
               <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for('dashboard') }}">Dashboard</a>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('user_dashboard') }}">User dashboard</a>
               </li>  
               <li class="nav-item">
-                <a class="nav-link active" href="{{ url_for('logout') }}">Logout</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
               </li>          
             </ul>
             {% else %}
