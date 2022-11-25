@@ -1,8 +1,10 @@
 {% extends "base.html" %}
+
+
 {% block content %}
-
-
+<div class="container">
 {% for message in get_flashed_messages() %}
+
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         {{ message }}
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -11,12 +13,9 @@
   </div>
 {% endfor %}
 
-    <!-- <h1>Bonjour {{ name }}</h1> -->
-    <h1>Login</h1>
-    <br><br><br>
-
-
     <br>
+    <h1>Login</h1>
+    <br><br>
     <div class="shadow p-3 mb-5 bg-body rounded">
         <form method="POST">
             {{ form.hidden_tag() }}
@@ -35,4 +34,13 @@
         </form>
     </div>
 
+    <br>
+    <br>
+
+    <div class="checkbox mb-3">
+       <h6>Vous n'avez pas encore de compte ? </h6>
+       <a class="btn btn-sm btn-secondary" href="{{ url_for('add_user') }}">S'inscrire</a>
+    </div>
+
+</div>
 {% endblock %}

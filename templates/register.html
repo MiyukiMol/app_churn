@@ -1,6 +1,8 @@
 {% extends "base.html" %}
-{% block content %}
 
+
+{% block content %}
+<div class="container">
 {% for message in get_flashed_messages() %}
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         {{ message }}
@@ -50,5 +52,5 @@
 <br><br><br>
 
 
-
+</div>
 {% endblock %}

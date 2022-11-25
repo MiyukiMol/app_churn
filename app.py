@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, flash
+from flask import Flask, request, render_template, redirect, flash, Response
 import pickle
 from flask_mysqldb import MySQL
 from flask_sqlalchemy import SQLAlchemy
@@ -22,11 +22,7 @@ import flask_monitoringdashboard as dashboard
 
 app = Flask(__name__)
 
-app.logger.debug('debug')
-app.logger.info('info')
-app.logger.warning('message')
-app.logger.error('error')
-app.logger.critical('critical')
+
 
 # flask monitoring dashboard
 dashboard.bind(app)
@@ -56,6 +52,13 @@ def load_user(user_id):
     return Users.query.get(int(user_id))
 
 
+# create home page
+@app.route('/', methods=['GET','POST'])
+def home():
+    return render_template('home.html')
+
+
+
 # create login page
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -67,7 +70,7 @@ def login():
             if check_password_hash(user.password_hash, form.password.data):
                 login_user(user)
                 flash("Login succesfull")
-                return redirect('/dashboard')
+                return redirect('/user_dashboard')
             else:
                 flash("Password incorrect")
         else:
@@ -231,9 +234,7 @@ def delete_user(id):
 # upload prediction model
 model = pickle.load(open('model_states.pkl', 'rb'))
 
-@app.route("/")
-def home():
-    return render_template('home.html')
+
 
 
 
@@ -241,6 +242,7 @@ def home():
 
 # upload prediction model
 @app.route('/predict',methods=['GET','POST'])
+@login_required
 def predict():
     states = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
         'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME',
@@ -387,27 +389,40 @@ def admin_resultat():
 
 
 
-# from logging.handlers import SMTPHandler
-# from logging import FileHandler, WARNING, ERROR, CRITICAL, INFO, Formatter
+from logging.handlers import SMTPHandler
+from logging import FileHandler, WARNING, ERROR, CRITICAL, INFO, Formatter
 
-# file_handler = FileHandler('logs/errorlog.txt')
-# file_handler.setLevel(ERROR)
+file_handler = FileHandler('logs/errorlog.txt')
+file_handler.setLevel(ERROR)
 
-# app.logger.addHandler(file_handler)
+app.logger.addHandler(file_handler)
 
-# mail_handler = SMTPHandler(
-#     mailhost='127.0.0.1',
-#     fromaddr='server-error@test.com',
-#     toaddrs=['nantes211@gmail.com'],
-#     subject='Application Error'
-#  )
-# mail_handler.setLevel(ERROR)
-# mail_handler.setFormatter(Formatter(
-#     '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
-#     ))
+mail_handler = SMTPHandler(
+     mailhost=('127.0.0.1', 1025),
+     fromaddr='server-error@test.com',
+     toaddrs=['admin@test.localhost'],
+     subject='Application Error'
+  )
+mail_handler.setLevel(ERROR)
+mail_handler.setFormatter(Formatter(
+     '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+     ))
 
-# app.logger.addHandler(mail_handler)
+app.logger.addHandler(mail_handler)
 
+@app.route("/log")
+def log():
+    app.logger.debug('debug')
+    app.logger.info('info')
+    app.logger.warning('message')
+    app.logger.error('error')
+    app.logger.critical('critical')
+    #return render_template('home.html')
+    return Response("test", status=200, mimetype='text/html')
+
+# https://qiita.com/k_future/items/d74b1a26cd9efee8315d
+# https://www.youtube.com/watch?v=Ns2baWEoVFg
+# https://msiz07-flask-docs-ja.readthedocs.io/ja/latest/logging.html
 
 if __name__ == "__main__":
     app.run(debug=True)
